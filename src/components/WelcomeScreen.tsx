@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Sparkles } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 interface WelcomeScreenProps {
   onStart: () => void;
@@ -9,7 +10,11 @@ interface WelcomeScreenProps {
 const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 animate-fadeIn">
-      <Card className="max-w-lg w-full p-8 md:p-12 text-center shadow-xl">
+      <Card className="max-w-lg w-full p-8 md:p-12 text-center shadow-xl bg-card/95 backdrop-blur border-primary/20">
+        <div className="mb-6 flex justify-center">
+          <img src={logo} alt="Desbloquea tu Potencial Profesional" className="h-16 md:h-20 mb-4" />
+        </div>
+        
         <div className="mb-6 flex justify-center">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-secondary/10 flex items-center justify-center animate-breathe">
             <Sparkles className="w-10 h-10 text-primary" />
