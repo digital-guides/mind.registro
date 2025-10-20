@@ -6,6 +6,7 @@ import { DailyLog } from "./DailyLogForm";
 import { ActivePause } from "./ActivePauseForm";
 import { BarChart, FileDown, Calendar, Activity } from "lucide-react";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
 
 interface WeeklySummaryProps {
   logs: DailyLog[];
@@ -23,9 +24,138 @@ const WeeklySummary = ({ logs, pauses, onNewWeek }: WeeklySummaryProps) => {
   };
 
   const handleDownloadPDF = () => {
-    toast.info("Función de descarga PDF en desarrollo", {
-      description: "Pronto podrás exportar tu resumen semanal",
-    });
+    try {
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      let yPosition = 20;
+
+      // Título
+      pdf.setFontSize(20);
+      pdf.setTextColor(247, 144, 30); // Naranja
+      pdf.text("Resumen Semanal de Bienestar", pageWidth / 2, yPosition, { align: "center" });
+      
+      yPosition += 15;
+      pdf.setFontSize(10);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text("Programa: Del agotamiento al empoderamiento", pageWidth / 2, yPosition, { align: "center" });
+      
+      yPosition += 15;
+
+      // Prácticas de Mindfulness
+      if (logs.length > 0) {
+        pdf.setFontSize(16);
+        pdf.setTextColor(30, 42, 57); // Azul marino
+        pdf.text("Prácticas de Mindfulness", 15, yPosition);
+        yPosition += 10;
+
+        days.forEach((day) => {
+          const log = getLogForDay(day);
+          if (log) {
+            if (yPosition > 250) {
+              pdf.addPage();
+              yPosition = 20;
+            }
+
+            pdf.setFontSize(12);
+            pdf.setTextColor(0, 0, 0);
+            pdf.text(`${day}`, 15, yPosition);
+            yPosition += 7;
+
+            pdf.setFontSize(10);
+            pdf.setTextColor(60, 60, 60);
+            pdf.text(`Práctica: ${log.practice}`, 20, yPosition);
+            yPosition += 6;
+            pdf.text(`Emoción: ${log.emotion}`, 20, yPosition);
+            yPosition += 6;
+            pdf.text(`Energía: ${getEnergyEmoji(log.energyBefore)} → ${getEnergyEmoji(log.energyAfter)}`, 20, yPosition);
+            yPosition += 6;
+            
+            if (log.reflection) {
+              const lines = pdf.splitTextToSize(`Reflexión: "${log.reflection}"`, pageWidth - 40);
+              pdf.text(lines, 20, yPosition);
+              yPosition += 6 * lines.length;
+            }
+            
+            yPosition += 5;
+          }
+        });
+
+        yPosition += 10;
+      }
+
+      // Pausas Activas
+      if (pauses.length > 0) {
+        if (yPosition > 200) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+
+        pdf.setFontSize(16);
+        pdf.setTextColor(30, 42, 57);
+        pdf.text("Pausas Activas Conscientes", 15, yPosition);
+        yPosition += 10;
+
+        days.forEach((day) => {
+          const dayPauses = getPausesForDay(day);
+          if (dayPauses.length > 0) {
+            if (yPosition > 250) {
+              pdf.addPage();
+              yPosition = 20;
+            }
+
+            pdf.setFontSize(12);
+            pdf.setTextColor(0, 0, 0);
+            pdf.text(`${day} (${dayPauses.length} pausa${dayPauses.length > 1 ? 's' : ''})`, 15, yPosition);
+            yPosition += 7;
+
+            dayPauses.forEach((pause) => {
+              pdf.setFontSize(10);
+              pdf.setTextColor(60, 60, 60);
+              pdf.text(`• ${pause.moment} - ${pause.type} (${pause.duration} min)`, 20, yPosition);
+              yPosition += 6;
+              pdf.text(`  Sensación: ${pause.sensation}`, 20, yPosition);
+              yPosition += 6;
+              
+              if (pause.reflection) {
+                const lines = pdf.splitTextToSize(`  Reflexión: "${pause.reflection}"`, pageWidth - 40);
+                pdf.text(lines, 20, yPosition);
+                yPosition += 6 * lines.length;
+              }
+              
+              yPosition += 3;
+            });
+
+            yPosition += 5;
+          }
+        });
+      }
+
+      // Footer
+      const totalPages = pdf.internal.pages.length - 1;
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(8);
+        pdf.setTextColor(150, 150, 150);
+        pdf.text(
+          "María Auxiliadora Vielma - Desbloquea tu Potencial Profesional",
+          pageWidth / 2,
+          pdf.internal.pageSize.getHeight() - 10,
+          { align: "center" }
+        );
+      }
+
+      // Descargar
+      const fecha = new Date().toLocaleDateString('es-ES');
+      pdf.save(`resumen-semanal-${fecha}.pdf`);
+      
+      toast.success("PDF descargado exitosamente", {
+        description: "Tu resumen semanal ha sido guardado",
+      });
+    } catch (error) {
+      toast.error("Error al generar el PDF", {
+        description: "Por favor intenta de nuevo",
+      });
+    }
   };
 
   const getLogForDay = (day: string) => {
