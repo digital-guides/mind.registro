@@ -1,22 +1,28 @@
 import { useState, useEffect } from "react";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import DailyLogForm, { DailyLog } from "@/components/DailyLogForm";
+import ActivePauseForm, { ActivePause } from "@/components/ActivePauseForm";
 import WeeklySummary from "@/components/WeeklySummary";
 import ClosingScreen from "@/components/ClosingScreen";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, BarChart, PlusCircle } from "lucide-react";
 
-type Screen = "welcome" | "log" | "summary" | "closing";
+type Screen = "welcome" | "log" | "pause" | "summary" | "closing";
 
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
   const [logs, setLogs] = useState<DailyLog[]>([]);
+  const [pauses, setPauses] = useState<ActivePause[]>([]);
 
   // Load logs from localStorage on mount
   useEffect(() => {
     const savedLogs = localStorage.getItem("mindfulness-logs");
     if (savedLogs) {
       setLogs(JSON.parse(savedLogs));
+    }
+    const savedPauses = localStorage.getItem("active-pauses");
+    if (savedPauses) {
+      setPauses(JSON.parse(savedPauses));
     }
   }, []);
 
@@ -25,21 +31,32 @@ const Index = () => {
     localStorage.setItem("mindfulness-logs", JSON.stringify(logs));
   }, [logs]);
 
+  // Save pauses to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("active-pauses", JSON.stringify(pauses));
+  }, [pauses]);
+
   const handleSaveLog = (log: DailyLog) => {
     setLogs((prevLogs) => {
       // Remove any existing log for the same day
       const filteredLogs = prevLogs.filter((l) => l.day !== log.day);
       return [...filteredLogs, log];
     });
+    setCurrentScreen("pause");
+  };
+
+  const handleSavePause = (pause: ActivePause) => {
+    setPauses((prevPauses) => [...prevPauses, pause]);
   };
 
   const handleNewWeek = () => {
     setLogs([]);
+    setPauses([]);
     setCurrentScreen("welcome");
   };
 
   const handleViewSummary = () => {
-    if (logs.length === 0) {
+    if (logs.length === 0 && pauses.length === 0) {
       setCurrentScreen("log");
     } else if (logs.length === 5) {
       setCurrentScreen("closing");
@@ -59,7 +76,8 @@ const Index = () => {
               size="sm"
               onClick={() => {
                 if (currentScreen === "log") setCurrentScreen("welcome");
-                else if (currentScreen === "summary") setCurrentScreen("log");
+                else if (currentScreen === "pause") setCurrentScreen("log");
+                else if (currentScreen === "summary") setCurrentScreen("pause");
                 else if (currentScreen === "closing") setCurrentScreen("summary");
               }}
               className="gap-2"
@@ -92,6 +110,17 @@ const Index = () => {
                   Nuevo registro
                 </Button>
               )}
+
+              {currentScreen === "pause" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleViewSummary}
+                  className="gap-2"
+                >
+                  Ir al resumen
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -107,8 +136,12 @@ const Index = () => {
           <DailyLogForm onSave={handleSaveLog} />
         )}
 
+        {currentScreen === "pause" && (
+          <ActivePauseForm onSave={handleSavePause} />
+        )}
+
         {currentScreen === "summary" && (
-          <WeeklySummary logs={logs} onNewWeek={handleNewWeek} />
+          <WeeklySummary logs={logs} pauses={pauses} onNewWeek={handleNewWeek} />
         )}
 
         {currentScreen === "closing" && (
